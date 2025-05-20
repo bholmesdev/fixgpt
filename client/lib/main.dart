@@ -65,7 +65,7 @@ class _MyHomePageState extends State<MyHomePage> {
       case 0:
         page = GeneratorPage();
       case 1:
-        page = Placeholder();
+        page = FavoritesPage();
       default:
         throw UnimplementedError("No widget at $selectedIndex");
     }
@@ -108,6 +108,30 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       );
     });
+  }
+}
+
+class FavoritesPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    final theme = Theme.of(context);
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+      body: SafeArea(
+          child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        child: ListView(children: [
+          Text("Words", style: theme.textTheme.titleLarge),
+          SizedBox(height: 8),
+          for (var pair in appState.favoriteWordPairs)
+            Align(
+                alignment: Alignment.centerLeft,
+                child: Text("${pair.first} ${pair.second}",
+                    style: theme.textTheme.bodyLarge))
+        ]),
+      )),
+    );
   }
 }
 
