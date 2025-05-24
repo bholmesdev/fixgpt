@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hubble Go</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+
+<body class="p-4">
+    <h1 class="text-2xl font-bold mb-4">Hubble Go</h1>
+    <p class="mb-2">Ask about the weather in a city to test the tool call functionality.</p>
+    <p class="mb-4"><i>Example: "What's the weather like in Amsterdam?"</i></p>
+    <div id="status" class="text-gray-600"></div>
+</body>
+
+<script>
+    async function init() {
+        const tokenResponse = await fetch("/session");
+        const data = await tokenResponse.json();
+        const EPHEMERAL_KEY = data.key;
+
+        const pc = new RTCPeerConnection();
+
+        // Set up to play remote audio from the model
+        const audioEl = document.createElement("audio");
+        audioEl.autoplay = true;
+        pc.ontrack = e => audioEl.srcObject = e.streams[0];
+
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+            audio: true
+        });
+        pc.addTrack(mediaStream.getTracks()[0]);
+
+        // Set up message channel to handle events
+        const dc = pc.createDataChannel("oai-events");
+        dc.addEventListener("message", handleMessage);
+
+        // Start the session using the Session Description Protocol (SDP)
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        const baseUrl = "https://api.openai.com/v1/realtime";
+        const model = "gpt-4o-realtime-preview-2024-12-17";
+        const sdpResponse = await fetch(`${baseUrl}?model=${model}`, {
+            method: "POST",
+            body: offer.sdp,
+            headers: {
+                Authorization: `Bearer ${EPHEMERAL_KEY}`,
+                "Content-Type": "application/sdp"
+            },
+        });
+
+        const answer = {
+            type: "answer",
+            sdp: await sdpResponse.text(),
+        };
+        await pc.setRemoteDescription(answer);
+        document.getElementById('status').textContent = 'Connected! Waiting for session creation...';
+        console.log('WebRTC connection established, waiting for session.created event');
+
+
+        /**
+         * @param {MessageEvent} e
+         */
+        async function handleMessage(e) {
+            console.log("Received message:", e);
+
+            try {
+                const message = JSON.parse(e.data);
+                console.log("Parsed message:", message);
+
+                if (message.type === "session.created") {
+                    console.log("Session created, sending tool configuration");
+                    sendToolCallConfig();
+                }
+                else if (message.type === "response.function_call_arguments.done") {
+                    console.log("Received function call arguments:", message);
+                    if (message.name === "get_weather") {
+                        console.log(`Processing get_weather tool call with ID: ${message.call_id}`);
+
+                        try {
+                            const args = JSON.parse(message.arguments);
+                            console.log("Tool call arguments:", args);
+                            const response = await fetch("/tools/getWeather", {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json"
+                                },
+                                body: JSON.stringify({
+                                    location: args.location
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Weather API error: ${response.status}`);
+                            }
+
+                            const weatherData = await response.json();
+                            console.log("Weather data received:", weatherData);
+
+                            const output = `${weatherData.temperature}${weatherData.units}`;
+
+                            dc.send(JSON.stringify({
+                                type: "conversation.item.create",
+                                item: {
+                                    type: "function_call_output",
+                                    call_id: message.call_id,
+                                    output: output
+                                }
+                            }));
+
+                            dc.send(JSON.stringify({ type: "response.create" }));
+                        } catch (error) {
+                            console.error("Error processing tool call:", error);
+
+                            const errorResponse = {
+                                type: "tool_response",
+                                tool_call_id: message.call_id,
+                                output: `Error: ${error.message}`
+                            };
+                            dc.send(JSON.stringify(errorResponse));
+                        }
+                    } else {
+                        console.warn(`Unknown tool function: ${message.name}`);
+                    }
+                } else {
+                    console.log(`Received message of type: ${message.type}`);
+
+                    if (message.type === "audio.response.started") {
+                        document.getElementById('status').textContent = 'AI is responding...';
+                    } else if (message.type === "audio.response.completed") {
+                        document.getElementById('status').textContent = 'Response completed. Try asking about the weather!';
+                    }
+                }
+            } catch (error) {
+                console.error("Error handling message:", error);
+            }
+        }
+
+        function sendToolCallConfig() {
+            console.log("Sending session.update with tool configuration");
+            dc.send(JSON.stringify({
+                type: "session.update",
+                session: {
+                    tools: [{
+                        type: "function",
+                        name: "get_weather",
+                        description: "Get the current weather in a given location",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                location: {
+                                    type: "string",
+                                    description: "The name of the city to get the weather for"
+                                }
+                            },
+                            required: ["location"]
+                        }
+                    }]
+                }
+            }));
+
+            document.getElementById('status').textContent = 'Session updated with tools. Try asking about the weather!';
+        };
+    }
+    init();
+
+</script>
+
+</html>
