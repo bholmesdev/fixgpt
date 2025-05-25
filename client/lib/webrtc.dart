@@ -134,10 +134,6 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       final response = await request.close();
       final responseBody = await response.transform(utf8.decoder).join();
 
-      developer.log('OpenAI API response status: ${response.statusCode}');
-      developer.log('OpenAI API response headers: ${response.headers}');
-      developer.log('OpenAI API response body: $responseBody');
-
       if (response.statusCode > 299) {
         throw Exception(
             'Failed to establish WebRTC connection with OpenAI. Status: ${response.statusCode}, Body: $responseBody');
@@ -155,11 +151,11 @@ class OpenAIRealtimeClient extends ChangeNotifier {
   }
 
   void _handleMessage(RTCDataChannelMessage message) {
-    developer.log('Received message: ${message.text}');
+    // developer.log('Received message: ${message.text}');
 
     try {
       final messageData = json.decode(message.text);
-      developer.log('Parsed message: $messageData');
+      // developer.log('Parsed message: $messageData');
 
       switch (messageData['type']) {
         case 'session.created':
@@ -170,6 +166,8 @@ class OpenAIRealtimeClient extends ChangeNotifier {
           developer.log('Received function call arguments: $messageData');
           if (messageData['name'] == 'get_weather') {
             _handleWeatherToolCall(messageData);
+          } else if (messageData['name'] == 'send_chat_message') {
+            _handleSendChatMessageToolCall(messageData);
           } else {
             developer.log('Unknown tool function: ${messageData['name']}');
           }
@@ -186,6 +184,20 @@ class OpenAIRealtimeClient extends ChangeNotifier {
     } catch (e) {
       developer.log('Error handling message: $e');
     }
+  }
+
+  Future<void> _handleSendChatMessageToolCall(
+      Map<String, dynamic> toolCall) async {
+    developer.log(
+        'Processing send_chat_message tool call with ID: ${toolCall['call_id']}');
+
+    final args = json.decode(toolCall['arguments']);
+    final message = args['message'];
+    if (message == null || message is! String) {
+      developer.log('Invalid message in send_chat_message tool call');
+      return;
+    }
+    developer.log('Sending chat message: $message');
   }
 
   Future<void> _handleWeatherToolCall(Map<String, dynamic> message) async {
@@ -248,6 +260,22 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       'type': 'session.update',
       'session': {
         'tools': [
+          {
+            'type': 'function',
+            'name': 'send_chat_message',
+            'description':
+                'Send a chat message to the user. Use this to send details that are easier to explain via text than voice. This includes links and drafts.',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'message': {
+                  'type': 'string',
+                  'description': 'The message to send to the user',
+                },
+              },
+              'required': ['message'],
+            },
+          },
           {
             'type': 'function',
             'name': 'get_weather',
