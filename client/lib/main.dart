@@ -41,31 +41,41 @@ class Home extends StatelessWidget {
       body: Column(
         children: [
           Orb(),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32.0, top: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildActionButton(
-                  context,
-                  'assets/icons/chat_3_fill.svg',
-                  'Chat',
-                  () {
-                    // TODO: Implement Chat button action
-                    print('Chat button pressed');
-                  },
-                ),
-                _buildActionButton(
-                  context,
-                  'assets/icons/phone_fill.svg',
-                  'Voice',
-                  () {
-                    voice.init();
-                    print('Voice button pressed');
-                  },
-                ),
-              ],
-            ),
+          ActionButtons(),
+        ],
+      ),
+    );
+  }
+}
+
+class ActionButtons extends StatelessWidget {
+  const ActionButtons({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var voice = context.watch<OpenAIRealtimeClient>();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 32.0, top: 16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildActionButton(
+            context,
+            'assets/icons/chat_3_fill.svg',
+            'Chat',
+            () {
+              // TODO: Implement Chat button action
+              print('Chat button pressed');
+            },
+          ),
+          _buildActionButton(
+            context,
+            'assets/icons/phone_fill.svg',
+            'Voice',
+            () {
+              voice.init();
+              print('Voice button pressed');
+            },
           ),
         ],
       ),
