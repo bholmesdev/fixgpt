@@ -106,6 +106,45 @@ class ActionButtons extends StatelessWidget {
   }
 }
 
+class ChatPane extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    var voice = context.watch<OpenAIRealtimeClient>();
+    return ListView.builder(
+      padding: const EdgeInsets.all(16.0),
+      itemCount: voice.messages.length,
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 10.0,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.blue[500],
+                borderRadius: BorderRadius.circular(18.0),
+              ),
+              child: Text(
+                voice.messages[index],
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16.0,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class Orb extends StatelessWidget {
   const Orb({
     super.key,
