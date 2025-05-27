@@ -12,11 +12,18 @@ class OpenAIRealtimeClient extends ChangeNotifier {
   RTCDataChannel? _dataChannel;
   MediaStream? _localStream;
   bool isConnected = false;
+  bool chatEnabled = false;
+  List<String> messages = [];
 
   @override
   void dispose() {
     _cleanup();
     super.dispose();
+  }
+
+  void toggleChat() {
+    chatEnabled = !chatEnabled;
+    notifyListeners();
   }
 
   Future<void> _cleanup() async {
@@ -198,6 +205,8 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       return;
     }
     developer.log('Sending chat message: $message');
+    messages.add(message);
+    notifyListeners();
   }
 
   Future<void> _handleWeatherToolCall(Map<String, dynamic> message) async {
