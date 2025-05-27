@@ -287,6 +287,22 @@ class OpenAIRealtimeClient extends ChangeNotifier {
           },
           {
             'type': 'function',
+            'name': 'ask_reasoning_model',
+            'description':
+                'When the user wants to go deeper into a topic, ask the reasoning model for more details. Common phrases include "give pros and cons," "give me more details," "go deeper," etc.',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'details': {
+                  'type': 'string',
+                  'description': 'The details to send to the reasoning model',
+                },
+              },
+              'required': ['details'],
+            },
+          },
+          {
+            'type': 'function',
             'name': 'get_weather',
             'description': 'Get the current weather in a given location',
             'parameters': {
