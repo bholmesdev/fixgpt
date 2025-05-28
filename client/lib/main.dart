@@ -3,6 +3,8 @@ import 'package:namer_app/webrtc.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 void main() {
   runApp(MyApp());
@@ -205,12 +207,23 @@ class ChatPane extends StatelessWidget {
                             color: theme.colorScheme.primary,
                             borderRadius: BorderRadius.circular(18.0),
                           ),
-                          child: Text(
-                            voice.messages[index],
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.0,
+                          child: MarkdownBody(
+                            data: voice.messages[index],
+                            styleSheet: MarkdownStyleSheet(
+                              p: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16.0,
+                              ),
+                              a: const TextStyle(
+                                color: Colors.lightBlue,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
+                            onTapLink: (text, href, title) {
+                              if (href != null) {
+                                launchUrl(Uri.parse(href));
+                              }
+                            },
                           ),
                         ),
                       ),
