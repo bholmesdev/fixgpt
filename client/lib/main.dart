@@ -18,6 +18,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => OpenAIRealtimeClient(),
       child: MaterialApp(
+        debugShowCheckedModeBanner: false,
         title: 'FixGPT',
         theme: ThemeData(
           useMaterial3: true,
