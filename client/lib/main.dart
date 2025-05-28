@@ -197,41 +197,50 @@ class ChatPane extends StatelessWidget {
                   padding: const EdgeInsets.all(16.0),
                   itemCount: voice.messages.length,
                   itemBuilder: (context, index) {
+                    final message = voice.messages[index];
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.75,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16.0,
-                            vertical: 10.0,
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary,
-                            borderRadius: BorderRadius.circular(18.0),
-                          ),
-                          child: MarkdownBody(
-                            data: voice.messages[index],
-                            styleSheet: MarkdownStyleSheet(
-                              p: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16.0,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Main message bubble
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth:
+                                    MediaQuery.of(context).size.width * 0.75,
                               ),
-                              a: const TextStyle(
-                                color: Colors.lightBlue,
-                                decoration: TextDecoration.underline,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0,
+                                vertical: 10.0,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary,
+                                borderRadius: BorderRadius.circular(18.0),
+                              ),
+                              child: MarkdownBody(
+                                data: message.content,
+                                styleSheet: MarkdownStyleSheet(
+                                  p: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.0,
+                                  ),
+                                  a: const TextStyle(
+                                    color: Colors.lightBlue,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                onTapLink: (text, href, title) {
+                                  if (href != null) {
+                                    launchUrl(Uri.parse(href));
+                                  }
+                                },
                               ),
                             ),
-                            onTapLink: (text, href, title) {
-                              if (href != null) {
-                                launchUrl(Uri.parse(href));
-                              }
-                            },
                           ),
-                        ),
+                        ],
                       ),
                     );
                   },

@@ -7,13 +7,44 @@ import 'dart:developer' as developer;
 
 import 'package:http/http.dart' as http;
 
+class ChatMessage {
+  final String content;
+  final bool isThinking;
+  final DateTime? thinkingStartTime;
+  final int? thinkingDurationSeconds;
+
+  ChatMessage({
+    required this.content,
+    this.isThinking = false,
+    this.thinkingStartTime,
+    this.thinkingDurationSeconds,
+  });
+
+  ChatMessage copyWith({
+    String? content,
+    bool? isThinking,
+    DateTime? thinkingStartTime,
+    int? thinkingDurationSeconds,
+  }) {
+    return ChatMessage(
+      content: content ?? this.content,
+      isThinking: isThinking ?? this.isThinking,
+      thinkingStartTime: thinkingStartTime ?? this.thinkingStartTime,
+      thinkingDurationSeconds:
+          thinkingDurationSeconds ?? this.thinkingDurationSeconds,
+    );
+  }
+}
+
 class OpenAIRealtimeClient extends ChangeNotifier {
   RTCPeerConnection? _peerConnection;
   RTCDataChannel? _dataChannel;
   MediaStream? _localStream;
   bool isConnected = false;
   bool chatEnabled = false;
-  List<String> messages = [];
+  List<ChatMessage> messages = [];
+  String? _currentReasoningCallId;
+  DateTime? _reasoningStartTime;
 
   @override
   void dispose() {
@@ -217,7 +248,7 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       return;
     }
     developer.log('Sending chat message: $message');
-    messages.add(message);
+    messages.add(ChatMessage(content: message));
     notifyListeners();
   }
 
@@ -289,6 +320,16 @@ class OpenAIRealtimeClient extends ChangeNotifier {
 
       developer.log('Sending request to reasoning model: $details');
 
+      // Add "Thinking..." message and track timing
+      _currentReasoningCallId = toolCall['call_id'];
+      _reasoningStartTime = DateTime.now();
+      messages.add(ChatMessage(
+        content: "Thinking...",
+        isThinking: true,
+        thinkingStartTime: _reasoningStartTime,
+      ));
+      notifyListeners();
+
       final response = await http.post(
         Uri.parse('http://localhost:8080/reasoning'),
         headers: {
@@ -302,7 +343,28 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       }
 
       final reasoningResponse = response.body;
-      developer.log('Reasoning model response received: ${reasoningResponse.substring(0, 100)}...');
+      developer.log(
+          'Reasoning model response received: ${reasoningResponse.substring(0, 100)}...');
+
+      // Calculate thinking duration and update the thinking message
+      final thinkingDuration = _reasoningStartTime != null
+          ? DateTime.now().difference(_reasoningStartTime!).inSeconds
+          : 0;
+
+      // Remove the "Thinking..." message and add the response with duration info
+      if (messages.isNotEmpty && messages.last.isThinking) {
+        messages.removeLast();
+      }
+
+      messages.add(ChatMessage(
+        content: reasoningResponse,
+        thinkingDurationSeconds: thinkingDuration,
+      ));
+
+      // Clear tracking variables
+      _currentReasoningCallId = null;
+      _reasoningStartTime = null;
+      notifyListeners();
 
       // Send function call output
       _dataChannel?.send(RTCDataChannelMessage(json.encode({
@@ -320,6 +382,21 @@ class OpenAIRealtimeClient extends ChangeNotifier {
       })));
     } catch (e) {
       developer.log('Error processing reasoning model tool call: $e');
+
+      // Remove thinking message on error
+      if (messages.isNotEmpty && messages.last.isThinking) {
+        messages.removeLast();
+      }
+
+      // Add error message
+      messages.add(ChatMessage(
+        content: 'Error calling reasoning model: $e',
+      ));
+
+      // Clear tracking variables
+      _currentReasoningCallId = null;
+      _reasoningStartTime = null;
+      notifyListeners();
 
       // Send error response
       _dataChannel?.send(RTCDataChannelMessage(json.encode({
@@ -365,7 +442,7 @@ class OpenAIRealtimeClient extends ChangeNotifier {
             'type': 'function',
             'name': 'ask_reasoning_model',
             'description':
-                'When the user wants to go deeper into a topic, ask the reasoning model for more details. Common phrases include "give pros and cons," "give me more details," "go deeper," etc.',
+                'When the user wants to go deeper into a topic, ask the reasoning model for more details. Speak a brief summary of the response and ask the user to reference the chat for more details. Common phrases include "give pros and cons," "give me more details," "go deeper," etc.',
             'parameters': {
               'type': 'object',
               'properties': {
