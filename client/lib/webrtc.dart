@@ -185,6 +185,8 @@ class OpenAIRealtimeClient extends ChangeNotifier {
             _handleWeatherToolCall(messageData);
           } else if (messageData['name'] == 'send_chat_message') {
             _handleSendChatMessageToolCall(messageData);
+          } else if (messageData['name'] == 'ask_reasoning_model') {
+            _handleReasoningModelToolCall(messageData);
           } else {
             developer.log('Unknown tool function: ${messageData['name']}');
           }
@@ -269,6 +271,70 @@ class OpenAIRealtimeClient extends ChangeNotifier {
         'output': e.toString(),
       };
       _dataChannel?.send(RTCDataChannelMessage(json.encode(errorResponse)));
+    }
+  }
+
+  Future<void> _handleReasoningModelToolCall(
+      Map<String, dynamic> toolCall) async {
+    developer.log(
+        'Processing ask_reasoning_model tool call with ID: ${toolCall['call_id']}');
+
+    try {
+      final args = json.decode(toolCall['arguments']);
+      final details = args['details'];
+      if (details == null || details is! String) {
+        developer.log('Invalid details in ask_reasoning_model tool call');
+        return;
+      }
+
+      developer.log('Sending request to reasoning model: $details');
+
+      final response = await http.post(
+        Uri.parse('http://localhost:8080/reasoning'),
+        headers: {
+          'Content-Type': 'text/plain',
+        },
+        body: details,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Reasoning API error: ${response.statusCode}');
+      }
+
+      final reasoningResponse = response.body;
+      developer.log('Reasoning model response received: ${reasoningResponse.substring(0, 100)}...');
+
+      // Send function call output
+      _dataChannel?.send(RTCDataChannelMessage(json.encode({
+        'type': 'conversation.item.create',
+        'item': {
+          'type': 'function_call_output',
+          'call_id': toolCall['call_id'],
+          'output': reasoningResponse,
+        },
+      })));
+
+      // Request response creation
+      _dataChannel?.send(RTCDataChannelMessage(json.encode({
+        'type': 'response.create',
+      })));
+    } catch (e) {
+      developer.log('Error processing reasoning model tool call: $e');
+
+      // Send error response
+      _dataChannel?.send(RTCDataChannelMessage(json.encode({
+        'type': 'conversation.item.create',
+        'item': {
+          'type': 'function_call_output',
+          'call_id': toolCall['call_id'],
+          'output': 'Error calling reasoning model: $e',
+        },
+      })));
+
+      // Request response creation
+      _dataChannel?.send(RTCDataChannelMessage(json.encode({
+        'type': 'response.create',
+      })));
     }
   }
 
