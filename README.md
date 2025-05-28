@@ -21,6 +21,13 @@ Once generated, place your API key in a `server/.env` file with the name `OPENAI
 OPENAI_API_KEY=XXXX
 ```
 
+Then, start the server:
+
+```sh
+cd server/
+go run server.go
+```
+
 ### Client setup
 
 This app is built using [Flutter](https://flutter.dev) and tested on iOS. To get started, I recommend following the ["Start building" guide](https://docs.flutter.dev/get-started/install/macos/mobile-ios) to set up your environment to use Flutter with the iOS simulator. If you are development on a Windows or Linux machine, try following [the "Start building" guide for Android](https://docs.flutter.dev/get-started/install/macos/mobile-android).
