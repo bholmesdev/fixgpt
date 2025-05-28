@@ -39,8 +39,6 @@ class _HomeState extends State<Home> {
 
   @override
   Widget build(BuildContext context) {
-    var voice = context.watch<OpenAIRealtimeClient>();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('FixGPT'),
@@ -50,13 +48,17 @@ class _HomeState extends State<Home> {
         controller: _panelController,
         defaultPanelState: PanelState.CLOSED,
         minHeight: 0,
-        maxHeight: MediaQuery.of(context).size.height * 0.8,
+        maxHeight: MediaQuery.of(context).size.height -
+            MediaQuery.of(context).padding.top -
+            kToolbarHeight -
+            8.0,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(24.0),
           topRight: Radius.circular(24.0),
         ),
         panel: ChatPane(panelController: _panelController),
         body: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             Orb(),
             ActionButtons(panelController: _panelController),
