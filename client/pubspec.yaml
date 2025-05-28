@@ -17,6 +17,7 @@ dependencies:
   flutter_webrtc: ^0.14.1
   http: ^1.4.0
   flutter_svg: ^2.1.0
+  sliding_up_panel: ^2.0.0+1
 
 dev_dependencies:
   flutter_test:

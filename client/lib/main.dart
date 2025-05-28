@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:namer_app/webrtc.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 void main() {
   runApp(MyApp());
@@ -26,8 +27,15 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   const Home({super.key});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  final PanelController _panelController = PanelController();
 
   @override
   Widget build(BuildContext context) {
@@ -38,24 +46,37 @@ class Home extends StatelessWidget {
         title: const Text('FixGPT'),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Orb(),
-          ActionButtons(),
-        ],
+      body: SlidingUpPanel(
+        controller: _panelController,
+        defaultPanelState: PanelState.CLOSED,
+        minHeight: 0,
+        maxHeight: MediaQuery.of(context).size.height * 0.8,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24.0),
+          topRight: Radius.circular(24.0),
+        ),
+        panel: ChatPane(panelController: _panelController),
+        body: Column(
+          children: [
+            Orb(),
+            ActionButtons(panelController: _panelController),
+          ],
+        ),
       ),
     );
   }
 }
 
 class ActionButtons extends StatelessWidget {
-  const ActionButtons({super.key});
+  final PanelController panelController;
+
+  const ActionButtons({super.key, required this.panelController});
 
   @override
   Widget build(BuildContext context) {
     var voice = context.watch<OpenAIRealtimeClient>();
     return Padding(
-      padding: const EdgeInsets.only(bottom: 32.0, top: 16.0),
+      padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
@@ -64,7 +85,8 @@ class ActionButtons extends StatelessWidget {
             'assets/icons/chat_3_fill.svg',
             'Chat',
             () {
-              // TODO: Implement Chat button action
+              voice.toggleChat();
+              panelController.open();
               print('Chat button pressed');
             },
           ),
@@ -107,40 +129,94 @@ class ActionButtons extends StatelessWidget {
 }
 
 class ChatPane extends StatelessWidget {
+  final PanelController panelController;
+
+  const ChatPane({super.key, required this.panelController});
+
   @override
   Widget build(BuildContext context) {
     var voice = context.watch<OpenAIRealtimeClient>();
-    return ListView.builder(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: voice.messages.length,
-      itemBuilder: (context, index) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 10.0,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue[500],
-                borderRadius: BorderRadius.circular(18.0),
-              ),
-              child: Text(
-                voice.messages[index],
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16.0,
-                ),
-              ),
-            ),
+    var theme = Theme.of(context);
+
+    return Column(
+      children: [
+        // Drag handle
+        Container(
+          height: 5,
+          width: 40,
+          margin: const EdgeInsets.only(top: 12, bottom: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[300],
+            borderRadius: BorderRadius.circular(10),
           ),
-        );
-      },
+        ),
+
+        // Header with title and close button
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Chat',
+                style: theme.textTheme.titleLarge,
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  panelController.close();
+                },
+              ),
+            ],
+          ),
+        ),
+
+        // Divider
+        Divider(color: Colors.grey[300]),
+
+        // Chat messages
+        Expanded(
+          child: voice.messages.isEmpty
+              ? Center(
+                  child: Text(
+                    'No messages yet',
+                    style: TextStyle(color: Colors.grey[500]),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: voice.messages.length,
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.75,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 10.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(18.0),
+                          ),
+                          child: Text(
+                            voice.messages[index],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.0,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }
@@ -153,41 +229,38 @@ class Orb extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var voice = context.watch<OpenAIRealtimeClient>();
-    return Expanded(
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutQuad,
-              width: voice.isConnected ? 200 : 150,
-              height: voice.isConnected ? 200 : 150,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: voice.isConnected
-                      ? [
-                          Colors.blue[400]!,
-                          Colors.blue[600]!,
-                        ]
-                      : [
-                          Colors.grey[400]!,
-                          Colors.grey[600]!,
-                        ],
-                ),
-                shape: BoxShape.circle,
-              ),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutQuad,
+          width: voice.isConnected ? 200 : 150,
+          height: voice.isConnected ? 200 : 150,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topRight,
+              end: Alignment.bottomLeft,
+              colors: voice.isConnected
+                  ? [
+                      Colors.blue[400]!,
+                      Colors.blue[600]!,
+                    ]
+                  : [
+                      Colors.grey[400]!,
+                      Colors.grey[600]!,
+                    ],
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Ask me anything',
-              style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-            ),
-          ],
+            shape: BoxShape.circle,
+          ),
         ),
-      ),
+        const SizedBox(height: 16),
+        Text(
+          'Ask me anything',
+          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+        ),
+        const SizedBox(height: 30),
+      ],
     );
   }
 }
