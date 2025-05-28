@@ -212,11 +212,13 @@ func createOpenaiChatClient() openai.Client {
 
 func createSessionKey(apiKey string) (string, error) {
 	reqBody := struct {
-		Model string `json:"model"`
-		Voice string `json:"voice"`
+		Model        string `json:"model"`
+		Voice        string `json:"voice"`
+		Instructions string `json:"instructions"`
 	}{
-		Model: "gpt-4o-realtime-preview-2024-12-17",
-		Voice: "echo",
+		Model:        "gpt-4o-realtime-preview-2024-12-17",
+		Voice:        "echo",
+		Instructions: "You are a helpful and friendly assistant. You have tools available to help answer questions. When using these tools, share that you are using them. Ex: when using chat, say you sent a message. And when you are calling a reasoning tool, say you are thinking about it.",
 	}
 
 	jsonBody, err := json.Marshal(reqBody)
