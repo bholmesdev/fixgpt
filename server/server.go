@@ -27,7 +27,10 @@ type WeatherResponse struct {
 	Units       string `json:"units"`
 }
 
-const chatModel = openai.ChatModelGPT4o
+const (
+	chatModel = openai.ChatModelGPT4o
+	o3Model   = openai.ChatModelO3Mini
+)
 
 func main() {
 	// Load environment variables
@@ -102,6 +105,40 @@ func main() {
 
 	// Register the getWeather tool endpoint
 	http.HandleFunc("/tools/getWeather", getWeatherHandler)
+
+	// Register the reasoning endpoint
+	http.HandleFunc("/reasoning", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		client := createOpenaiChatClient()
+		bodyBytes, err := io.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+			return
+		}
+		userQuery := string(bodyBytes)
+
+		response, err := client.Responses.New(
+			context.Background(),
+			responses.ResponseNewParams{
+				Model: o3Model,
+				Input: responses.ResponseNewParamsInputUnion{
+					OfString: openai.String(userQuery),
+				},
+			},
+		)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error creating chat completion: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain")
+		fmt.Fprintf(w, "%s", response.OutputText())
+	})
 
 	fmt.Println("http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
