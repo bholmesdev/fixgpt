@@ -32,6 +32,16 @@ class OpenAIRealtimeClient extends ChangeNotifier {
     await _peerConnection?.close();
   }
 
+  Future<void> disconnect() async {
+    developer.log('Disconnecting WebRTC connection');
+    await _cleanup();
+    _peerConnection = null;
+    _dataChannel = null;
+    _localStream = null;
+    isConnected = false;
+    notifyListeners();
+  }
+
   Future<void> init() async {
     final ephemeralKey = await _getConnectionKey();
     developer.log("EphemeralKey: $ephemeralKey");

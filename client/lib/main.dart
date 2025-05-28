@@ -99,8 +99,13 @@ class ActionButtons extends StatelessWidget {
             'assets/icons/phone_fill.svg',
             'Voice',
             () {
-              voice.init();
-              print('Voice button pressed');
+              if (voice.isConnected) {
+                voice.disconnect();
+                print('Voice disconnected');
+              } else {
+                voice.init();
+                print('Voice connected');
+              }
             },
           ),
         ],
