@@ -273,7 +273,7 @@ class OpenAIRealtimeClient extends ChangeNotifier {
             'type': 'function',
             'name': 'send_chat_message',
             'description':
-                'Send a chat message to the user. Use this to send details that are easier to explain via text than voice. This includes links and drafts.',
+                'Send a chat message to the user. When using this tool, say that you are sending a chat message. Use this to send details that are easier to explain via text than voice. This includes links and drafts.',
             'parameters': {
               'type': 'object',
               'properties': {
