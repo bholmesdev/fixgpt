@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         title: 'FixGPT',
         theme: ThemeData(
           useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.greenAccent),
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.grey),
         ),
         home: Home(),
       ),
